@@ -90,4 +90,6 @@ if __name__ == "__main__":
 
     df = add_coordinates(df)
 
+    save_results(df)
+
     print(df.head())
