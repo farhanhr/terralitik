@@ -1,12 +1,37 @@
 import pandas as pd
 import os
 
+
+LOCATION_COORDS = {
+    "Karawang": (-6.3227, 107.3376),
+    "Indramayu": (-6.3275, 108.3200),
+    "Klaten": (-7.7050, 110.6062),
+    "Ngawi": (-7.4039, 111.4461),
+    "Banyuwangi": (-8.2192, 114.3691),
+}
+
 def load_features():
 
     df = pd.read_csv("data/processed/climate_features.csv")
 
     return df
 
+def add_coordinates(df):
+
+    latitudes = []
+    longitudes = []
+
+    for loc in df["location"]:
+
+        lat, lon = LOCATION_COORDS[loc]
+
+        latitudes.append(lat)
+        longitudes.append(lon)
+
+    df["lat"] = latitudes
+    df["lon"] = longitudes
+
+    return df
 
 def calculate_drought_index(df):
 
@@ -63,6 +88,6 @@ if __name__ == "__main__":
 
     df = classify_risk(df)
 
-    save_results(df)
+    df = add_coordinates(df)
 
     print(df.head())
