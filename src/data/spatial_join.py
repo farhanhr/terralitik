@@ -11,7 +11,7 @@ def clean_name(name):
 
 def load_regency_geojson(path):
     gdf = gpd.read_file(path)
-    # Membaca format properties yang baru
+    
     gdf = gdf[["province", "regency_city", "geometry"]]
     gdf["regency_clean"] = gdf["regency_city"].apply(clean_name)
     return gdf

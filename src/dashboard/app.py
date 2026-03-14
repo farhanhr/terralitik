@@ -18,9 +18,6 @@ st.subheader("Monitoring Risiko Kekeringan Pertanian Pulau Jawa")
 
 GEOJSON_PATH = "data/geospatial/jawa_kabupaten.geojson"
 
-# =========================
-# LOAD DATA
-# =========================
 @st.cache_data
 def load_and_prepare_data():
     df = pd.read_csv("data/processed/drought_risk.csv")
@@ -33,29 +30,22 @@ df = load_and_prepare_data()
 with open(GEOJSON_PATH, encoding="utf-8") as f:
     geojson = json.load(f)
 
-# =========================
-# TRAIN MODEL
-# =========================
 @st.cache_resource
 def get_model(data):
     return train_model(data)
 
 model = get_model(df)
 
-# =========================
-# MAP (HEATMAP FIX)
-# =========================
 st.header("🗺 Peta Persebaran Risiko Kekeringan Terkini")
 
-# Mengambil data hari terakhir untuk dipetakan
 latest_date = df['date'].max()
 df_latest = df[df['date'] == latest_date]
 
 fig_map = px.choropleth_mapbox(
     df_latest,
     geojson=geojson,
-    locations="location", # Sesuaikan dengan nama kota di DataFrame
-    featureidkey="properties.regency_city", # Sesuaikan dengan key di GeoJSON
+    locations="location", 
+    featureidkey="properties.regency_city",
     color="drought_score",
     color_continuous_scale="RdYlGn_r", 
     range_color=[0, 1],
@@ -71,9 +61,6 @@ fig_map = px.choropleth_mapbox(
 fig_map.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
 st.plotly_chart(fig_map, use_container_width=True)
 
-# =========================
-# DETAIL LOKASI & GRAFIK CUACA
-# =========================
 st.divider()
 st.header("📊 Analisis & Prediksi Wilayah")
 
@@ -82,7 +69,6 @@ selected_location = st.selectbox("Pilih Wilayah untuk Analisis Mendalam:", locat
 
 loc_df = df[df["location"] == selected_location].sort_values("date")
 
-# Tab untuk mengorganisir Grafik Historis dan Prediksi AI
 tab1, tab2 = st.tabs(["Histori Cuaca & Anomali", "Prediksi Risiko AI (30 Hari)"])
 
 with tab1:
@@ -90,7 +76,6 @@ with tab1:
     
     col_chart1, col_chart2 = st.columns(2)
     
-    # Grafik Curah Hujan
     with col_chart1:
         fig_rain = px.bar(
             loc_df, x="date", y="precipitation", 
@@ -100,7 +85,6 @@ with tab1:
         )
         st.plotly_chart(fig_rain, use_container_width=True)
         
-    # Grafik Suhu
     with col_chart2:
         fig_temp = go.Figure()
         fig_temp.add_trace(go.Scatter(x=loc_df["date"], y=loc_df["temp_max"], mode='lines+markers', name='Suhu Max', line=dict(color='red')))
@@ -109,7 +93,6 @@ with tab1:
         st.plotly_chart(fig_temp, use_container_width=True)
 
 with tab2:
-    # Prediksi 30 Hari menggunakan model AI
     forecast = forecast_next_days(model, df, selected_location, days=30)
     
     forecast_df = pd.DataFrame({
@@ -127,9 +110,6 @@ with tab2:
     fig_forecast.add_hline(y=0.50, line_dash="dash", line_color="orange", annotation_text="Batas Risiko Sedang")
     st.plotly_chart(fig_forecast, use_container_width=True)
 
-# =========================
-# EARLY WARNING & RISK
-# =========================
 st.divider()
 col1, col2 = st.columns(2)
 

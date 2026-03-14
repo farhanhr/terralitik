@@ -64,7 +64,7 @@ def fetch_all_locations():
         if not df.empty:
             all_data.append(df)
         if (i + 1) % 40 == 0:
-            time.sleep(5) # Mencegah limit API
+            time.sleep(5)
 
     if all_data:
         final_df = pd.concat(all_data, ignore_index=True)
