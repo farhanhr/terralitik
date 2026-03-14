@@ -7,3 +7,8 @@ uvicorn
 streamlit 
 python-dotenv 
 plotly
+xgboost
+requests
+geopandas
+shapely 
+pyproj

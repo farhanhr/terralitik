@@ -1,79 +1,79 @@
 import requests
 import pandas as pd
-from datetime import datetime
+import geopandas as gpd
+import time
 import os
 
 API_URL = "https://api.open-meteo.com/v1/forecast"
+GEOJSON_PATH = "data/geospatial/jawa_kabupaten.geojson"
 
-LOCATIONS = [
-    {"name": "Karawang", "lat": -6.3227, "lon": 107.3376},
-    {"name": "Indramayu", "lat": -6.3275, "lon": 108.3200},
-    {"name": "Klaten", "lat": -7.7050, "lon": 110.6062},
-    {"name": "Ngawi", "lat": -7.4039, "lon": 111.4461},
-    {"name": "Banyuwangi", "lat": -8.2192, "lon": 114.3691}
-]
-
+def get_all_locations():
+    gdf = gpd.read_file(GEOJSON_PATH)
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        gdf['centroid'] = gdf.geometry.centroid
+        
+    locations = []
+    for _, row in gdf.iterrows():
+        loc_name = row['regency_city']
+        lat, lon = row['centroid'].y, row['centroid'].x
+        
+        if pd.isna(lat) or pd.isna(lon) or not loc_name:
+            continue
+            
+        locations.append({
+            "name": loc_name, 
+            "lat": lat,
+            "lon": lon
+        })
+    return locations
 
 def fetch_weather_for_location(location):
-
     params = {
         "latitude": location["lat"],
         "longitude": location["lon"],
-        "daily": [
-            "temperature_2m_max",
-            "temperature_2m_min",
-            "precipitation_sum"
-        ],
+        "daily": ["temperature_2m_max", "temperature_2m_min", "precipitation_sum"],
         "timezone": "auto"
     }
-
-    response = requests.get(API_URL, params=params)
-
-    data = response.json()
-
-    daily = data["daily"]
-
-    df = pd.DataFrame({
-        "date": daily["time"],
-        "location": location["name"],
-        "temp_max": daily["temperature_2m_max"],
-        "temp_min": daily["temperature_2m_min"],
-        "precipitation": daily["precipitation_sum"]
-    })
-
-    return df
-
+    try:
+        response = requests.get(API_URL, params=params)
+        response.raise_for_status()
+        daily = response.json()["daily"]
+        
+        return pd.DataFrame({
+            "date": daily["time"],
+            "location": location["name"],
+            "lat": location["lat"],
+            "lon": location["lon"],
+            "temp_max": daily["temperature_2m_max"],
+            "temp_min": daily["temperature_2m_min"],
+            "precipitation": daily["precipitation_sum"]
+        })
+    except Exception as e:
+        print(f"Gagal di {location['name']}: {e}")
+        return pd.DataFrame()
 
 def fetch_all_locations():
-
+    locations = get_all_locations()
     all_data = []
+    
+    print(f"🔄 Menarik data cuaca untuk {len(locations)} wilayah di Jawa...")
+    for i, loc in enumerate(locations):
+        df = fetch_weather_for_location(loc)
+        if not df.empty:
+            all_data.append(df)
+        if (i + 1) % 40 == 0:
+            time.sleep(5) # Mencegah limit API
 
-    for location in LOCATIONS:
-
-        df = fetch_weather_for_location(location)
-
-        all_data.append(df)
-
-    combined = pd.concat(all_data)
-
-    return combined
-
-
-def save_data(df):
-
-    os.makedirs("data/raw", exist_ok=True)
-
-    filename = f"data/raw/weather_{datetime.now().date()}.csv"
-
-    df.to_csv(filename, index=False)
-
-    print("Saved:", filename)
-
+    if all_data:
+        final_df = pd.concat(all_data, ignore_index=True)
+        os.makedirs("data/raw", exist_ok=True)
+        path = f"data/raw/weather_jawa_{pd.Timestamp.now().strftime('%Y%m%d')}.csv"
+        final_df.to_csv(path, index=False)
+        print(f"✅ Data tersimpan: {path}")
+        return final_df
+    return pd.DataFrame()
 
 if __name__ == "__main__":
-
-    df = fetch_all_locations()
-
-    print(df.head())
-
-    save_data(df)
+    fetch_all_locations()
