@@ -1,15 +1,20 @@
 import pandas as pd
 import os
 
+MASTER_CSV = "data/raw/weather_jawa_master.csv"
+
 def load_data():
-    files = [f for f in os.listdir("data/raw") if f.endswith('.csv')]
-    latest = sorted(files)[-1]
-    return pd.read_csv(f"data/raw/{latest}")
+    if os.path.exists(MASTER_CSV):
+        return pd.read_csv(MASTER_CSV)
+    else:
+        raise FileNotFoundError(f"{MASTER_CSV} tidak ditemukan. Jalankan fetch_weather.py terlebih dahulu.")
 
 def create_features(df):
     df["temp_avg"] = (df["temp_max"] + df["temp_min"]) / 2
-    df["rain_anomaly"] = df["precipitation"] - df["precipitation"].mean()
-    df["temp_anomaly"] = df["temp_avg"] - df["temp_avg"].mean()
+    
+    df["rain_anomaly"] = df.groupby("location")["precipitation"].transform(lambda x: x - x.mean())
+    df["temp_anomaly"] = df.groupby("location")["temp_avg"].transform(lambda x: x - x.mean())
+    
     return df
 
 def save_processed(df):

@@ -6,6 +6,7 @@ import os
 
 API_URL = "https://api.open-meteo.com/v1/forecast"
 GEOJSON_PATH = "data/geospatial/jawa_kabupaten.geojson"
+MASTER_CSV = "data/raw/weather_jawa_master.csv"
 
 def get_all_locations():
     gdf = gpd.read_file(GEOJSON_PATH)
@@ -56,23 +57,33 @@ def fetch_weather_for_location(location):
 
 def fetch_all_locations():
     locations = get_all_locations()
-    all_data = []
+    new_data_list = []
     
     print(f"🔄 Menarik data cuaca untuk {len(locations)} wilayah di Jawa...")
     for i, loc in enumerate(locations):
-        df = fetch_weather_for_location(loc)
-        if not df.empty:
-            all_data.append(df)
+        df_new = fetch_weather_for_location(loc)
+        if not df_new.empty:
+            new_data_list.append(df_new)
         if (i + 1) % 40 == 0:
-            time.sleep(5)
+            time.sleep(5) 
 
-    if all_data:
-        final_df = pd.concat(all_data, ignore_index=True)
+    if new_data_list:
+        new_df = pd.concat(new_data_list, ignore_index=True)
         os.makedirs("data/raw", exist_ok=True)
-        path = f"data/raw/weather_jawa_{pd.Timestamp.now().strftime('%Y%m%d')}.csv"
-        final_df.to_csv(path, index=False)
-        print(f"✅ Data tersimpan: {path}")
+        
+        if os.path.exists(MASTER_CSV):
+            print("Membaca data historis master...")
+            old_df = pd.read_csv(MASTER_CSV)
+            combined_df = pd.concat([old_df, new_df], ignore_index=True)
+            final_df = combined_df.drop_duplicates(subset=["date", "location"], keep="last")
+        else:
+            final_df = new_df
+            
+        final_df = final_df.sort_values(by=["location", "date"]).reset_index(drop=True)
+        final_df.to_csv(MASTER_CSV, index=False)
+        print(f"✅ Data berhasil diperbarui! Total baris master saat ini: {len(final_df)}")
         return final_df
+        
     return pd.DataFrame()
 
 if __name__ == "__main__":
