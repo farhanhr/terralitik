@@ -7,6 +7,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import urllib.parse
 
 from data.spatial_join import attach_regency
 from models.drought_forecast import train_model, forecast_next_days, crop_failure_risk
@@ -93,27 +94,31 @@ with tab1:
         st.plotly_chart(fig_temp, use_container_width=True)
 
 with tab2:
-    forecast = forecast_next_days(model, df, selected_location, days=30)
+    forecast_dates, forecast_scores = forecast_next_days(model, df, selected_location)
     
-    forecast_df = pd.DataFrame({
-        "Hari Ke-": list(range(1, 31)),
-        "Prediksi Skor Kekeringan": forecast
-    })
+    if forecast_dates:
+        forecast_df = pd.DataFrame({
+            "Tanggal": forecast_dates,
+            "Prediksi Skor Kekeringan": forecast_scores
+        })
 
-    fig_forecast = px.line(
-        forecast_df, x="Hari Ke-", y="Prediksi Skor Kekeringan",
-        title=f"Proyeksi Model XGBoost: Risiko Kekeringan {selected_location}",
-        markers=True,
-        color_discrete_sequence=["#d62728"]
-    )
-    fig_forecast.add_hline(y=0.75, line_dash="dash", line_color="red", annotation_text="Batas Risiko Tinggi")
-    fig_forecast.add_hline(y=0.50, line_dash="dash", line_color="orange", annotation_text="Batas Risiko Sedang")
-    st.plotly_chart(fig_forecast, use_container_width=True)
+        fig_forecast = px.line(
+            forecast_df, x="Tanggal", y="Prediksi Skor Kekeringan",
+            title=f"Proyeksi Model XGBoost (Berbasis Data Satelit): {selected_location}",
+            markers=True,
+            color_discrete_sequence=["#d62728"]
+        )
+        fig_forecast.add_hline(y=0.75, line_dash="dash", line_color="red", annotation_text="Batas Risiko Tinggi")
+        fig_forecast.add_hline(y=0.50, line_dash="dash", line_color="orange", annotation_text="Batas Risiko Sedang")
+        st.plotly_chart(fig_forecast, use_container_width=True)
+    else:
+        st.warning("Data satelit masa depan belum tersedia. Silakan perbarui data harian.")
 
 st.divider()
 col1, col2 = st.columns(2)
 
-risk_future = crop_failure_risk(forecast[-1])
+future_risk_score = forecast_scores[-1] if forecast_scores else loc_df.iloc[-1]["drought_score"]
+risk_future = crop_failure_risk(future_risk_score)
 latest_risk = loc_df.iloc[-1]["risk_level"]
 
 with col1:
@@ -133,3 +138,112 @@ with col2:
         st.warning(f"Informasi {selected_location}: Pantau kapasitas waduk lokal.")
     else:
         st.success(f"Status {selected_location}: Curah hujan saat ini mencukupi.")
+
+st.divider()
+st.header("💼 Analisis Risiko Ekonomi & Tata Kelola")
+
+
+BASELINE_YIELD_VALUE_PER_HA = 25000000
+
+if forecast_scores:
+    avg_forecast_score = sum(forecast_scores) / len(forecast_scores)
+else:
+    avg_forecast_score = loc_df.iloc[-1]["drought_score"]
+
+if avg_forecast_score < 0.5:
+    potential_loss_percentage = 0.0
+elif avg_forecast_score < 0.75:
+    potential_loss_percentage = ((avg_forecast_score - 0.5) / 0.25) * 0.30
+else:
+    potential_loss_percentage = 0.30 + ((avg_forecast_score - 0.75) / 0.25) * 0.70
+
+potential_loss_percentage = min(potential_loss_percentage, 1.0)
+
+col_eco1, col_eco2, col_eco3 = st.columns(3)
+
+with col_eco1:
+    st.metric(
+        label="Rata-Rata Indeks Kerentanan (30 Hari)",
+        value=f"{avg_forecast_score * 100:.1f}%",
+        delta="Kritis" if avg_forecast_score >= 0.75 else "Aman",
+        delta_color="inverse" if avg_forecast_score >= 0.75 else "normal"
+    )
+
+with col_eco2:
+    st.metric(
+        label="Estimasi Penurunan Hasil Panen",
+        value=f"{potential_loss_percentage * 100:.1f}%",
+        delta="- Tonase" if potential_loss_percentage > 0 else "Normal",
+        delta_color="red" if potential_loss_percentage > 0 else "normal"
+    )
+
+with col_eco3:
+    est_loss_value = BASELINE_YIELD_VALUE_PER_HA * potential_loss_percentage
+    st.metric(
+        label="Potensi Kerugian per Hektar",
+        value=f"Rp {est_loss_value:,.0f}".replace(',', '.'),
+        delta="Risiko Finansial" if est_loss_value > 0 else "Aman",
+        delta_color="inverse" if est_loss_value > 0 else "normal"
+    )
+
+st.subheader("🔍 Analisis Faktor Risiko")
+
+latest_loc_data = loc_df.iloc[-1]
+
+fig_xai = go.Figure(go.Waterfall(
+    name="20", orientation="h",
+    measure=["relative", "relative", "total"],
+    y=["Anomali Curah Hujan", "Anomali Suhu", "Total Skor Kekeringan"],
+    
+    x=[
+        -latest_loc_data['rain_anomaly'] * 0.1, 
+        latest_loc_data['temp_anomaly'] * 0.2,  
+        latest_loc_data['drought_score']
+    ],
+    connector={"line":{"color":"rgb(63, 63, 63)"}},
+))
+fig_xai.update_layout(
+    title=f"Kontribusi Variabel Iklim terhadap Risiko Saat Ini di {selected_location}",
+    showlegend=False,
+    height=350,
+    margin=dict(l=0, r=0, t=40, b=0)
+)
+st.plotly_chart(fig_xai, use_container_width=True)
+
+st.divider()
+st.header("🚨 Distribusi Peringatan Dini")
+st.markdown("Kirimkan peringatan terenkripsi dan instruksi mitigasi langsung ke grup koordinator lapangan atau petani.")
+
+wa_message = f"""
+*⚠️ PERINGATAN DINI KEKERINGAN TERRALITIK*
+Wilayah: *{selected_location}*
+Tanggal Update: {latest_date.strftime('%d %b %Y')}
+
+*Status Analisis AI:*
+Tingkat Risiko: *{latest_risk.upper()}*
+Skor Kekeringan: {avg_forecast_score:.2f} (0=Aman, 1=Kritis)
+
+*Rekomendasi Tindakan Segera:*
+"""
+
+if latest_risk == "High":
+    wa_message += "- Aktifkan pompa air cadangan dari embung terdekat.\n- Tunda penanaman bibit baru hingga kelembapan tanah stabil.\n- Persiapkan asuransi klaim gagal panen (AUTP)."
+elif latest_risk == "Moderate":
+    wa_message += "- Kurangi volume penyiraman, terapkan sistem irigasi bergilir.\n- Pantau kapasitas sumber air permukaan secara harian."
+else:
+    wa_message += "- Kondisi normal. Lakukan pemeliharaan irigasi rutin."
+
+wa_message += "\n\n_Dihasilkan secara otomatis oleh sistem AI Terralitik._"
+
+encoded_message = urllib.parse.quote(wa_message)
+whatsapp_url = f"https://wa.me/?text={encoded_message}"
+
+if latest_risk in ["High", "Moderate"]:
+    st.warning(f"Sistem mendeteksi anomali di {selected_location}. Segera distribusikan peringatan ke aparat desa!")
+    st.link_button(
+        "📱 Bagikan Peringatan via WhatsApp", 
+        whatsapp_url, 
+        type="primary"
+    )
+else:
+    st.success("Kondisi iklim saat ini terpantau aman. Tidak ada tindakan darurat yang diperlukan.")
