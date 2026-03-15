@@ -12,3 +12,4 @@ requests
 geopandas
 shapely 
 pyproj
+google-generativeai
