@@ -19,15 +19,9 @@ def get_all_locations():
     for _, row in gdf.iterrows():
         loc_name = row['regency_city']
         lat, lon = row['centroid'].y, row['centroid'].x
-        
         if pd.isna(lat) or pd.isna(lon) or not loc_name:
             continue
-            
-        locations.append({
-            "name": loc_name, 
-            "lat": lat,
-            "lon": lon
-        })
+        locations.append({"name": loc_name, "lat": lat, "lon": lon})
     return locations
 
 def fetch_weather_for_location(location):
@@ -35,7 +29,9 @@ def fetch_weather_for_location(location):
         "latitude": location["lat"],
         "longitude": location["lon"],
         "daily": ["temperature_2m_max", "temperature_2m_min", "precipitation_sum"],
-        "timezone": "auto"
+        "timezone": "auto",
+        "past_days": 14,      # Menarik data cuaca aktual masa lalu
+        "forecast_days": 16   # Menarik prediksi cuaca murni dari satelit
     }
     try:
         response = requests.get(API_URL, params=params)
@@ -59,7 +55,7 @@ def fetch_all_locations():
     locations = get_all_locations()
     new_data_list = []
     
-    print(f"🔄 Menarik data cuaca untuk {len(locations)} wilayah di Jawa...")
+    print(f"🔄 Menarik data riil & forecast satelit untuk {len(locations)} wilayah...")
     for i, loc in enumerate(locations):
         df_new = fetch_weather_for_location(loc)
         if not df_new.empty:
@@ -72,7 +68,6 @@ def fetch_all_locations():
         os.makedirs("data/raw", exist_ok=True)
         
         if os.path.exists(MASTER_CSV):
-            print("Membaca data historis master...")
             old_df = pd.read_csv(MASTER_CSV)
             combined_df = pd.concat([old_df, new_df], ignore_index=True)
             final_df = combined_df.drop_duplicates(subset=["date", "location"], keep="last")
@@ -81,7 +76,7 @@ def fetch_all_locations():
             
         final_df = final_df.sort_values(by=["location", "date"]).reset_index(drop=True)
         final_df.to_csv(MASTER_CSV, index=False)
-        print(f"✅ Data berhasil diperbarui! Total baris master saat ini: {len(final_df)}")
+        print("✅ Data tersimpan secara dinamis!")
         return final_df
         
     return pd.DataFrame()
