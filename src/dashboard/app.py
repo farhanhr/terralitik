@@ -12,17 +12,13 @@ import urllib.parse
 from data.spatial_join import attach_regency
 from models.drought_forecast import train_model, forecast_next_days, crop_failure_risk
 
-# Import modul AI yang baru dibuat
 try:
     from models.ai_assistant import get_ai_recommendation
 except ImportError:
-    pass # Fallback jika file belum dibuat
+    pass 
 
 st.set_page_config(page_title="Terralitik | EWS", page_icon="🌱", layout="wide")
 
-# =========================
-# HEADER & STYLING
-# =========================
 st.markdown("""
     <style>
     .main-header { font-size: 2.5rem; font-weight: 700; color: #1E3A8A; margin-bottom: 0;}
@@ -52,9 +48,6 @@ def get_model(data):
 
 model = get_model(df)
 
-# =========================
-# PETA UTAMA
-# =========================
 latest_date = df['date'].max()
 df_latest = df[df['date'] == latest_date]
 
@@ -80,9 +73,6 @@ st.plotly_chart(fig_map, use_container_width=True)
 
 st.divider()
 
-# =========================
-# KONTROL ANALISIS WILAYAH
-# =========================
 st.markdown("### 📊 Analisis & Prediksi Spesifik Wilayah")
 locations_list = sorted(df["location"].unique())
 selected_location = st.selectbox("Pilih Kabupaten/Kota untuk dianalisis:", locations_list, index=locations_list.index("Indramayu") if "Indramayu" in locations_list else 0)
@@ -94,9 +84,6 @@ future_risk_score = forecast_scores[-1] if forecast_scores else loc_df.iloc[-1][
 risk_future = crop_failure_risk(future_risk_score)
 latest_risk = loc_df.iloc[-1]["risk_level"]
 
-# =========================
-# TABS INTERAKTIF
-# =========================
 tab1, tab2, tab3 = st.tabs(["📈 Proyeksi AI (30 Hari)", "🤖 Asisten Mitigasi NLP", "🔍 Histori & Explainable AI"])
 
 with tab1:
@@ -115,7 +102,6 @@ with tab1:
     else:
         st.warning("Data satelit masa depan belum tersedia untuk wilayah ini.")
 
-# Menghitung metrik ekonomi untuk digunakan di Tab 2 dan Panel Ekonomi
 BASELINE_YIELD_VALUE_PER_HA = 25000000
 avg_forecast_score = sum(forecast_scores) / len(forecast_scores) if forecast_scores else loc_df.iloc[-1]["drought_score"]
 
@@ -133,7 +119,6 @@ with tab2:
     st.markdown("#### 💬 Asisten Terralitik (Generative AI)")
     st.info("AI secara otomatis menerjemahkan data teknis menjadi instruksi mitigasi bahasa natural.")
     
-    # Ambil API key dari Streamlit Secrets
     api_key = st.secrets.get("GEMINI_API_KEY", "")
     
     if st.button("Generate Rekomendasi Mitigasi dengan AI", type="primary"):
@@ -170,9 +155,6 @@ with tab3:
     fig_xai.update_layout(title="Faktor Penyumbang Risiko Saat Ini", showlegend=False, margin=dict(l=0, r=0, t=40, b=0), height=300)
     st.plotly_chart(fig_xai, use_container_width=True)
 
-# =========================
-# PANEL EKONOMI & TATA KELOLA (Data Export)
-# =========================
 st.divider()
 st.markdown("### 💼 Analisis Risiko Ekonomi & Tata Kelola")
 
@@ -184,7 +166,6 @@ with col_eco2:
 with col_eco3:
     st.metric(label="Potensi Kerugian per Hektar", value=f"Rp {est_loss_value:,.0f}".replace(',', '.'), delta="Risiko Finansial" if est_loss_value > 0 else "Aman", delta_color="inverse" if est_loss_value > 0 else "normal")
 
-# Fitur Ekspor Data untuk Laporan Dinas
 if forecast_dates:
     report_df = pd.DataFrame({
         "Tanggal": forecast_dates,
@@ -200,9 +181,6 @@ if forecast_dates:
         mime="text/csv",
     )
 
-# =========================
-# ACTIONABLE EWS (WhatsApp)
-# =========================
 st.markdown("### 🚨 Distribusi Peringatan Dini")
 wa_message = f"""*⚠️ PERINGATAN DINI KEKERINGAN TERRALITIK*
 Wilayah: *{selected_location}* | Update: {latest_date.strftime('%d %b %Y')}
