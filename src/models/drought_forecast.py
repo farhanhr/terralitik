@@ -1,5 +1,6 @@
 import pandas as pd
 from xgboost import XGBRegressor
+from datetime import datetime
 
 FEATURES = ["precipitation", "temp_avg", "rain_anomaly", "temp_anomaly"]
 
@@ -10,41 +11,28 @@ def train_model(df):
     model.fit(X, y)
     return model
 
-def forecast_next_days(model, df, location, days=30):
+def forecast_next_days(model, df, location):
     loc_df = df[df["location"] == location].copy()
-    if loc_df.empty:
-        return [0.0] * days
-
-    latest = loc_df.iloc[-1]
-    precipitation = latest["precipitation"]
-    temp_avg = latest["temp_avg"]
-    mean_rain = df["precipitation"].mean()
-    mean_temp = df["temp_avg"].mean()
+    loc_df['date'] = pd.to_datetime(loc_df['date'])
     
-    forecasts = []
+    # Ambil tanggal besok untuk memisahkan data aktual vs masa depan
+    tomorrow = pd.Timestamp.now().normalize() + pd.Timedelta(days=1)
+    
+    # Filter hanya data masa depan (dari Open-Meteo API)
+    future_df = loc_df[loc_df['date'] >= tomorrow].copy()
+    
+    if future_df.empty:
+        return [], []
 
-    for day in range(days):
-        # Transisi logis ke nilai rata-rata historis (Mean Reversion)
-        precipitation = (precipitation * 0.7) + (mean_rain * 0.3)
-        temp_avg = (temp_avg * 0.8) + (mean_temp * 0.2)
-        
-        rain_anomaly = precipitation - mean_rain
-        temp_anomaly = temp_avg - mean_temp
-        
-        X_future = pd.DataFrame([{
-            "precipitation": precipitation,
-            "temp_avg": temp_avg,
-            "rain_anomaly": rain_anomaly,
-            "temp_anomaly": temp_anomaly
-        }])
-        
-        pred = model.predict(X_future)[0]
-        pred_score = max(0.0, min(1.0, float(pred)))
-        forecasts.append(round(pred_score, 3))
-        
-    return forecasts
+    X_future = future_df[FEATURES]
+    predictions = model.predict(X_future)
+    
+    forecast_scores = [max(0.0, min(1.0, float(pred))) for pred in predictions]
+    forecast_dates = future_df['date'].dt.strftime('%Y-%m-%d').tolist()
+    
+    return forecast_dates, forecast_scores
 
 def crop_failure_risk(score):
-    if score < 0.4: return "Low"
-    elif score < 0.7: return "Moderate"
+    if score < 0.5: return "Low"
+    elif score < 0.75: return "Moderate"
     else: return "High"
