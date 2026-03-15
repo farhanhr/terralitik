@@ -15,10 +15,8 @@ def forecast_next_days(model, df, location):
     loc_df = df[df["location"] == location].copy()
     loc_df['date'] = pd.to_datetime(loc_df['date'])
     
-    # Ambil tanggal besok untuk memisahkan data aktual vs masa depan
     tomorrow = pd.Timestamp.now().normalize() + pd.Timedelta(days=1)
     
-    # Filter hanya data masa depan (dari Open-Meteo API)
     future_df = loc_df[loc_df['date'] >= tomorrow].copy()
     
     if future_df.empty:

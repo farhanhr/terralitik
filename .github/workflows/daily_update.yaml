@@ -1,0 +1,38 @@
+name: Daily Climate Data Update
+
+on:
+  schedule:
+    - cron: '0 17 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy requests scikit-learn fastapi uvicorn streamlit python-dotenv plotly xgboost requests shapely pyproj
+
+      - name: Run Data Pipeline
+        run: |
+          python src/data_pipeline/fetch_weather.py
+          python src/analysis/feature_engineering.py
+          python src/analysis/drought_index.py
+
+      - name: Commit and Push Updated CSV
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "Terralitik Auto-Bot"
+          git add data/raw/ data/processed/
+          # Jika tidak ada perubahan data, lewati proses commit
+          git commit -m "Auto-update: Pembaruan data iklim harian" || exit 0
+          git push
