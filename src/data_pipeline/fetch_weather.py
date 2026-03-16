@@ -1,7 +1,6 @@
 import requests
 import pandas as pd
 import geopandas as gpd
-import time
 import os
 
 API_URL = "https://api.open-meteo.com/v1/forecast"
@@ -24,47 +23,69 @@ def get_all_locations():
         locations.append({"name": loc_name, "lat": lat, "lon": lon})
     return locations
 
-def fetch_weather_for_location(location):
+def fetch_weather_batch(locations_batch):
+    lats = ",".join([str(loc["lat"]) for loc in locations_batch])
+    lons = ",".join([str(loc["lon"]) for loc in locations_batch])
+    
     params = {
-        "latitude": location["lat"],
-        "longitude": location["lon"],
+        "latitude": lats,
+        "longitude": lons,
         "daily": ["temperature_2m_max", "temperature_2m_min", "precipitation_sum"],
         "timezone": "auto",
-        "past_days": 14,      
-        "forecast_days": 16  
+        "past_days": 14,
+        "forecast_days": 16
     }
+    
     try:
-        response = requests.get(API_URL, params=params)
+        response = requests.get(API_URL, params=params, timeout=15)
         response.raise_for_status()
-        daily = response.json()["daily"]
+        data = response.json()
         
-        return pd.DataFrame({
-            "date": daily["time"],
-            "location": location["name"],
-            "lat": location["lat"],
-            "lon": location["lon"],
-            "temp_max": daily["temperature_2m_max"],
-            "temp_min": daily["temperature_2m_min"],
-            "precipitation": daily["precipitation_sum"]
-        })
+        if isinstance(data, dict) and "daily" in data:
+            data = [data]
+            
+        batch_df_list = []
+        for i, loc_data in enumerate(data):
+            loc_info = locations_batch[i]
+            daily = loc_data.get("daily", {})
+            
+            if not daily:
+                continue
+                
+            df = pd.DataFrame({
+                "date": daily.get("time", []),
+                "location": loc_info["name"],
+                "lat": loc_info["lat"],
+                "lon": loc_info["lon"],
+                "temp_max": daily.get("temperature_2m_max", []),
+                "temp_min": daily.get("temperature_2m_min", []),
+                "precipitation": daily.get("precipitation_sum", [])
+            })
+            batch_df_list.append(df)
+            
+        return pd.concat(batch_df_list, ignore_index=True) if batch_df_list else pd.DataFrame()
+        
     except Exception as e:
-        print(f"Gagal di {location['name']}: {e}")
+        print(f"Gagal mengambil batch API: {e}")
         return pd.DataFrame()
 
 def fetch_all_locations():
     locations = get_all_locations()
-    new_data_list = []
+    all_data_list = []
     
-    print(f"🔄 Menarik data riil & forecast satelit untuk {len(locations)} wilayah...")
-    for i, loc in enumerate(locations):
-        df_new = fetch_weather_for_location(loc)
-        if not df_new.empty:
-            new_data_list.append(df_new)
-        if (i + 1) % 40 == 0:
-            time.sleep(5) 
+    chunk_size = 50 
+    print(f"Mulai penarikan data satelit secara Batch untuk {len(locations)} wilayah...")
+    
+    for i in range(0, len(locations), chunk_size):
+        batch = locations[i:i + chunk_size]
+        print(f"Memproses batch {i+1} hingga {min(i+chunk_size, len(locations))}...")
+        
+        df_batch = fetch_weather_batch(batch)
+        if not df_batch.empty:
+            all_data_list.append(df_batch)
 
-    if new_data_list:
-        new_df = pd.concat(new_data_list, ignore_index=True)
+    if all_data_list:
+        new_df = pd.concat(all_data_list, ignore_index=True)
         os.makedirs("data/raw", exist_ok=True)
         
         if os.path.exists(MASTER_CSV):
@@ -76,7 +97,7 @@ def fetch_all_locations():
             
         final_df = final_df.sort_values(by=["location", "date"]).reset_index(drop=True)
         final_df.to_csv(MASTER_CSV, index=False)
-        print("✅ Data tersimpan secara dinamis!")
+        print(f"Finish! total updated data: {len(final_df)}")
         return final_df
         
     return pd.DataFrame()
