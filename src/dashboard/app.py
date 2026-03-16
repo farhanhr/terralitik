@@ -117,7 +117,7 @@ est_loss_value = BASELINE_YIELD_VALUE_PER_HA * potential_loss_percentage
 
 with tab2:
     st.markdown("#### 💬 Asisten Terralitik (Generative AI)")
-    st.info("AI secara otomatis menerjemahkan data teknis menjadi instruksi mitigasi bahasa natural.")
+    st.info("AI akan menerjemahkan data teknis menjadi instruksi mitigasi untuk anda.")
     
     api_key = st.secrets.get("GEMINI_API_KEY", "")
     

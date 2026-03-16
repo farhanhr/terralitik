@@ -30,8 +30,8 @@ def fetch_weather_for_location(location):
         "longitude": location["lon"],
         "daily": ["temperature_2m_max", "temperature_2m_min", "precipitation_sum"],
         "timezone": "auto",
-        "past_days": 14,      # Menarik data cuaca aktual masa lalu
-        "forecast_days": 16   # Menarik prediksi cuaca murni dari satelit
+        "past_days": 14,      
+        "forecast_days": 16  
     }
     try:
         response = requests.get(API_URL, params=params)
