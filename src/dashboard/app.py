@@ -17,7 +17,7 @@ try:
 except ImportError:
     pass 
 
-st.set_page_config(page_title="Terralitik | EWS", page_icon="🌱", layout="wide")
+st.set_page_config(page_title="Terralitik", page_icon="🌱", layout="wide")
 
 st.markdown("""
     <style>
@@ -25,7 +25,7 @@ st.markdown("""
     .sub-header { font-size: 1.2rem; color: #64748B; margin-bottom: 2rem;}
     </style>
     <div class="main-header">🌱 Terralitik</div>
-    <div class="sub-header">AI Drought Early Warning & Economic Risk System — Pulau Jawa</div>
+    <div class="sub-header">Java Drought Early Warning</div>
 """, unsafe_allow_html=True)
 
 GEOJSON_PATH = "data/geospatial/jawa_kabupaten.geojson"
@@ -69,7 +69,7 @@ fig_map = px.choropleth_mapbox(
     labels={'drought_score': 'Indeks Risiko (0-1)'}
 )
 fig_map.update_layout(margin={"r":0,"t":0,"l":0,"b":0}, height=500)
-st.plotly_chart(fig_map, use_container_width=True)
+st.plotly_chart(fig_map, width='stretch')
 
 st.divider()
 
@@ -84,7 +84,7 @@ future_risk_score = forecast_scores[-1] if forecast_scores else loc_df.iloc[-1][
 risk_future = crop_failure_risk(future_risk_score)
 latest_risk = loc_df.iloc[-1]["risk_level"]
 
-tab1, tab2, tab3 = st.tabs(["📈 Proyeksi AI (30 Hari)", "🤖 Asisten Mitigasi NLP", "🔍 Histori & Explainable AI"])
+tab1, tab2, tab3 = st.tabs(["📈 Proyeksi AI (30 Hari)", "🤖 Asisten Mitigasi", "🔍 Data Suhu dan Hujan"])
 
 with tab1:
     if forecast_dates:
@@ -98,7 +98,7 @@ with tab1:
         )
         fig_forecast.add_hline(y=0.75, line_dash="dash", line_color="red", annotation_text="Krisis (Gagal Panen)")
         fig_forecast.add_hline(y=0.50, line_dash="dash", line_color="orange", annotation_text="Waspada")
-        st.plotly_chart(fig_forecast, use_container_width=True)
+        st.plotly_chart(fig_forecast, width='stretch')
     else:
         st.warning("Data satelit masa depan belum tersedia untuk wilayah ini.")
 
@@ -138,12 +138,12 @@ with tab3:
         fig_temp.add_trace(go.Scatter(x=loc_df["date"], y=loc_df["temp_max"], mode='lines+markers', name='Suhu Max', line=dict(color='red')))
         fig_temp.add_trace(go.Scatter(x=loc_df["date"], y=loc_df["temp_min"], mode='lines+markers', name='Suhu Min', line=dict(color='blue')))
         fig_temp.update_layout(title="Pergerakan Suhu (°C)", xaxis_title="Tanggal", yaxis_title="Suhu")
-        st.plotly_chart(fig_temp, use_container_width=True)
+        st.plotly_chart(fig_temp, width='stretch')
         
     with col_rain:
         fig_rain = px.bar(loc_df, x="date", y="precipitation", title="Histori Hujan Terakhir (mm)")
         fig_rain.update_layout(margin=dict(l=0, r=0, t=40, b=0))
-        st.plotly_chart(fig_rain, use_container_width=True)
+        st.plotly_chart(fig_rain, width='stretch')
 
     latest_loc_data = loc_df.iloc[-1]
     fig_xai = go.Figure(go.Waterfall(
@@ -153,7 +153,7 @@ with tab3:
         connector={"line":{"color":"rgb(63, 63, 63)"}},
     ))
     fig_xai.update_layout(title="Faktor Penyumbang Risiko Saat Ini", showlegend=False, margin=dict(l=0, r=0, t=40, b=0), height=300)
-    st.plotly_chart(fig_xai, use_container_width=True)
+    st.plotly_chart(fig_xai, width='stretch')
 
 st.divider()
 st.markdown("### 💼 Analisis Risiko Ekonomi & Tata Kelola")
