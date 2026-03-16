@@ -3,7 +3,10 @@ name: Daily Climate Data Update
 on:
   schedule:
     - cron: '0 17 * * *'
-  workflow_dispatch:
+  workflow_dispatch: 
+
+permissions:
+  contents: write 
 
 jobs:
   update-data:
@@ -20,7 +23,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas numpy requests scikit-learn fastapi uvicorn streamlit python-dotenv plotly xgboost requests shapely pyproj
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Run Data Pipeline
         run: |
@@ -33,6 +37,10 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "Terralitik Auto-Bot"
           git add data/raw/ data/processed/
-          # Jika tidak ada perubahan data, lewati proses commit
-          git commit -m "Auto-update: Pembaruan data iklim harian" || exit 0
-          git push
+          
+          if git diff --staged --quiet; then
+            echo "Tidak ada data baru untuk di-commit."
+          else
+            git commit -m "Auto-update: Pembaruan data iklim harian & Prediksi AI"
+            git push
+          fi
