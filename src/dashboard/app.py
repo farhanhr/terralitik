@@ -149,26 +149,47 @@ with tab2:
                 st.error("Modul AI belum terhubung dengan benar.")
 
 with tab3:
-    col_xai, col_hist = st.columns(2)
-    with col_xai:
-        if not valid_loc_df.empty:
-            latest_loc_data = valid_loc_df.iloc[-1]
-            fig_xai = go.Figure(go.Waterfall(
-                name="20", orientation="h", measure=["relative", "relative", "total"],
-                y=["Anomali Hujan", "Anomali Suhu", "Total Skor"],
-                x=[-latest_loc_data['rain_anomaly'] * 0.1, latest_loc_data['temp_anomaly'] * 0.2, latest_loc_data['drought_score']],
-                connector={"line":{"color":"rgb(63, 63, 63)"}},
-            ))
-            fig_xai.update_layout(title="Faktor Penyumbang Risiko Saat Ini", showlegend=False, margin=dict(l=0, r=0, t=40, b=0), height=300)
-            st.plotly_chart(fig_xai, width='stretch')
-        else:
-            st.warning("Data histori tidak tersedia.")
+    col_temp, col_rain = st.columns(2)
+    with col_temp:
+        max_temp = max(loc_df["temp_max"].max(), loc_df["temp_min"].max())
+        min_temp = min(0, loc_df["temp_min"].min())
+        upper_temp = max_temp * 1.3
+        fig_temp = go.Figure()
+        fig_temp.add_trace(go.Scatter(x=loc_df["date"], y=loc_df["temp_max"], mode='lines+markers', name='Suhu Max', line=dict(color='red')))
+        fig_temp.add_trace(go.Scatter(x=loc_df["date"], y=loc_df["temp_min"], mode='lines+markers', name='Suhu Min', line=dict(color='blue')))
+        fig_temp.update_layout(
+            margin=dict(l=0, r=0, t=40, b=0),
+            height=400,
+            title="Pergerakan Suhu (°C)",
+            xaxis_title="Tanggal",
+            yaxis_title="Suhu",
+            yaxis=dict(range=[min_temp, upper_temp])
+        )
+        st.plotly_chart(fig_temp, width='stretch')
             
-    with col_hist:
+    with col_rain:
+        max_rain = loc_df["precipitation"].max()
+        upper_rain = max_rain * 1.3
         fig_rain = px.bar(loc_df, x="date", y="precipitation", title="Histori Hujan Terakhir (mm)")
-        fig_rain.update_layout(margin=dict(l=0, r=0, t=40, b=0), height=300)
+        fig_rain.update_layout(
+            margin=dict(l=0, r=0, t=40, b=0),
+            height=400,
+            yaxis=dict(range=[0, upper_rain])
+        )
         st.plotly_chart(fig_rain, width='stretch')
 
+    if not valid_loc_df.empty:
+        latest_loc_data = valid_loc_df.iloc[-1]
+        fig_xai = go.Figure(go.Waterfall(
+            name="20", orientation="h", measure=["relative", "relative", "total"],
+            y=["Anomali Hujan", "Anomali Suhu", "Total Skor"],
+            x=[-latest_loc_data['rain_anomaly'] * 0.1, latest_loc_data['temp_anomaly'] * 0.2, latest_loc_data['drought_score']],
+            connector={"line":{"color":"rgb(63, 63, 63)"}},
+        ))
+        fig_xai.update_layout(title="Faktor Penyumbang Risiko Saat Ini", showlegend=False, margin=dict(l=0, r=0, t=40, b=0), height=300)
+        st.plotly_chart(fig_xai, width='stretch')
+    else:
+        st.warning("Data histori tidak tersedia.")
 st.divider()
 st.markdown("### 💼 Analisis Risiko Ekonomi & Tata Kelola")
 
