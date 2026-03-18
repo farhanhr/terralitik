@@ -1,14 +1,17 @@
 import pandas as pd
 from xgboost import XGBRegressor
-from datetime import datetime
 
 FEATURES = ["precipitation", "temp_avg", "rain_anomaly", "temp_anomaly"]
 
 def train_model(df):
-    X = df[FEATURES]
-    y = df["drought_score"]
+    train_df = df.dropna(subset=FEATURES + ["drought_score"])
+    
+    X = train_df[FEATURES]
+    y = train_df["drought_score"]
+    
     model = XGBRegressor(n_estimators=300, max_depth=6, learning_rate=0.05, random_state=42)
     model.fit(X, y)
+    
     return model
 
 def forecast_next_days(model, df, location):
