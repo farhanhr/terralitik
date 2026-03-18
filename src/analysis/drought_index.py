@@ -30,7 +30,7 @@ def classify_risk(df):
 def save_results(df):
     os.makedirs("data/processed", exist_ok=True)
     df.to_csv("data/processed/drought_risk.csv", index=False)
-    print("✅ Indeks kekeringan diperbaiki dan disimpan.")
+    print("Indeks kekeringan diperbaiki dan disimpan.")
 
 if __name__ == "__main__":
     df = load_features()

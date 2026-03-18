@@ -20,7 +20,7 @@ def create_features(df):
 def save_processed(df):
     os.makedirs("data/processed", exist_ok=True)
     df.to_csv("data/processed/climate_features.csv", index=False)
-    print("✅ Fitur cuaca diproses dan disimpan.")
+    print("fitur cuaca diproses dan disimpan.")
 
 if __name__ == "__main__":
     df = load_data()
