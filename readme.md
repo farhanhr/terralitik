@@ -1,4 +1,4 @@
-# 🌱 Terralitik — AI Drought Early Warning System
+# 🌱 Terralitik — Java Drought Risk Early Warning System
 
 **Terralitik** is a smart, AI-powered dashboard designed to help farmers and local governments in Java, Indonesia, monitor, predict, and mitigate the risks of agricultural drought and crop failure. 
 
