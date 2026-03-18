@@ -25,7 +25,7 @@ st.markdown("""
     .sub-header { font-size: 1.2rem; color: #64748B; margin-bottom: 2rem;}
     </style>
     <div class="main-header">🌱 Terralitik</div>
-    <div class="sub-header">Java Drought Early Warning</div>
+    <div class="sub-header">Java Drought Early Warning System</div>
 """, unsafe_allow_html=True)
 
 GEOJSON_PATH = "data/geospatial/jawa_kabupaten.geojson"
@@ -204,6 +204,6 @@ whatsapp_url = f"https://wa.me/?text={encoded_message}"
 
 if latest_risk in ["High", "Moderate"] or avg_forecast_score >= 0.5:
     st.warning(f"Sistem mendeteksi peningkatan kerentanan di {selected_location}. Distribusikan mitigasi!")
-    st.link_button("📱 Bagikan Peringatan via WhatsApp", whatsapp_url, type="primary")
+    st.link_button("Bagikan Peringatan via WhatsApp", whatsapp_url, type="primary")
 else:
     st.success("Kondisi iklim saat ini terpantau aman. Tidak ada tindakan darurat yang diperlukan.")
