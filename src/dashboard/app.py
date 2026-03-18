@@ -103,7 +103,7 @@ else:
     latest_risk = "Low"
     latest_date_valid = pd.Timestamp.now()
 
-tab1, tab2, tab3 = st.tabs(["📈 Proyeksi AI", "🤖 Asisten Mitigasi NLP", "🔍 Data History"])
+tab1, tab2, tab3 = st.tabs(["📈 Proyeksi AI", "🤖 Asisten Mitigasi", "🔍 Data History"])
 
 with tab1:
     if forecast_dates:
