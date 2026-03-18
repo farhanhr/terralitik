@@ -84,7 +84,7 @@ future_risk_score = forecast_scores[-1] if forecast_scores else loc_df.iloc[-1][
 risk_future = crop_failure_risk(future_risk_score)
 latest_risk = loc_df.iloc[-1]["risk_level"]
 
-tab1, tab2, tab3 = st.tabs(["📈 Proyeksi AI (30 Hari)", "🤖 Asisten Mitigasi", "🔍 Data Suhu dan Hujan"])
+tab1, tab2, tab3 = st.tabs(["📈 Proyeksi AI", "🤖 Asisten Mitigasi", "🔍 Data Suhu dan Hujan"])
 
 with tab1:
     if forecast_dates:

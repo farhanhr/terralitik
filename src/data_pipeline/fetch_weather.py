@@ -32,8 +32,8 @@ def fetch_weather_batch(locations_batch):
         "longitude": lons,
         "daily": ["temperature_2m_max", "temperature_2m_min", "precipitation_sum"],
         "timezone": "auto",
-        "past_days": 14,
-        "forecast_days": 16
+        "past_days": 3,
+        "forecast_days": 14
     }
     
     try:
