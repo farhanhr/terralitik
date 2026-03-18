@@ -112,8 +112,12 @@ with tab1:
             "Prediksi Skor Kekeringan": forecast_scores
         })
         fig_forecast = px.line(
-            forecast_df, x="Tanggal", y="Prediksi Skor Kekeringan",
-            markers=True, color_discrete_sequence=["#d62728"]
+            forecast_df, 
+            x="Tanggal", 
+            y="Prediksi Skor Kekeringan",
+            markers=True, 
+            color_discrete_sequence=["#d62728"],
+            range_y=[0, 1]
         )
         fig_forecast.add_hline(y=0.75, line_dash="dash", line_color="red", annotation_text="Krisis (Gagal Panen)")
         fig_forecast.add_hline(y=0.50, line_dash="dash", line_color="orange", annotation_text="Waspada")
