@@ -12,4 +12,4 @@ requests
 geopandas
 shapely 
 pyproj
-google-generativeai
+google-genai

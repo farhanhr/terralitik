@@ -9,7 +9,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import urllib.parse
 
-from data.spatial_join import attach_regency
+from data.spatial_join import attach_regency, clean_name
 from models.drought_forecast import train_model, forecast_next_days, crop_failure_risk
 
 try:
@@ -42,6 +42,8 @@ df = load_and_prepare_data()
 with open(GEOJSON_PATH, encoding="utf-8") as f:
     geojson = json.load(f)
 
+
+
 @st.cache_resource
 def get_model(data):
     return train_model(data)
@@ -49,26 +51,40 @@ def get_model(data):
 model = get_model(df)
 
 latest_date = df['date'].max()
-df_latest = df[df['date'] == latest_date]
+df_latest = df[df['date'] == latest_date].copy() 
+
+for feature in geojson["features"]:
+    props = feature["properties"]
+    raw_name = props.get("regency_city", props.get("province", props.get("NAME_1", "")))
+    clean_str = clean_name(raw_name)
+    
+    feature["id"] = clean_str 
+    feature["properties"]["location_clean"] = clean_str
+
+df_latest["location_clean"] = df_latest["location"].apply(clean_name)
 
 st.markdown("### 🗺 Persebaran Risiko Kekeringan Terkini")
-fig_map = px.choropleth_mapbox(
+
+# Menggunakan choropleth_map (menggantikan choropleth_mapbox yang deprecated)
+fig_map = px.choropleth_map(
     df_latest,
     geojson=geojson,
-    locations="location", 
-    featureidkey="properties.regency_city",
+    locations="location_clean", 
+    featureidkey="id", # Langsung menunjuk ke atribut 'id' yang kita buat di atas
     color="drought_score",
     color_continuous_scale="RdYlGn_r", 
     range_color=[0, 1],
-    mapbox_style="carto-positron",
+    map_style="carto-positron", # Parameter baru menggantikan mapbox_style
     zoom=6,
     center={"lat": -7.25, "lon": 110.0},
     opacity=0.8,
     hover_name="location",
-    hover_data={"drought_score": True, "risk_level": True, "location": False},
+    hover_data={"drought_score": True, "risk_level": True, "location_clean": False},
     labels={'drought_score': 'Indeks Risiko (0-1)'}
 )
 fig_map.update_layout(margin={"r":0,"t":0,"l":0,"b":0}, height=500)
+
+
 st.plotly_chart(fig_map, width='stretch')
 
 st.divider()

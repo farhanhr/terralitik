@@ -1,12 +1,11 @@
-import google.generativeai as genai
+from google import genai
 
 def get_ai_recommendation(location, current_risk, avg_forecast, est_loss, api_key):
     if not api_key:
         return "API Key tidak ditemukan. Silakan tambahkan GEMINI_API_KEY di Streamlit Secrets."
     
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-3-flash-preview')
+        client = genai.Client(api_key=api_key)
         
         prompt = f"""
         Anda adalah asisten AI 'Terralitik', pakar mitigasi bencana kekeringan pertanian di Indonesia.
@@ -19,11 +18,14 @@ def get_ai_recommendation(location, current_risk, avg_forecast, est_loss, api_ke
         
         Format output:
         1. [Analisis Singkat] - Jelaskan makna data di atas dengan bahasa yang mudah dipahami petani/aparat desa.
-        2. [Tindakan Mitigasi] - Berikan  poin-poin tindakan (bullet points) praktis dan spesifik untuk menyelamatkan panen.
+        2. [Tindakan Mitigasi] - Berikan 3 poin tindakan (bullet points) praktis dan spesifik untuk menyelamatkan panen.
         Gunakan bahasa Indonesia yang profesional, tegas, dan darurat jika berisiko tinggi.
         """
         
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model='gemini-3-flash-preview',
+            contents=prompt
+        )
         return response.text
     except Exception as e:
         return f"Terjadi kesalahan pada sistem NLP: {str(e)}"
