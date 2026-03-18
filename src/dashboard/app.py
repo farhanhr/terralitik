@@ -15,6 +15,11 @@ try:
 except ImportError:
     pass 
 
+st.markdown(
+    '<meta name="dicoding:email" content="farhanhr00@gmail.com">',
+    unsafe_allow_html=True
+)
+
 st.set_page_config(page_title="Terralitik | EWS", page_icon="🌱", layout="wide")
 
 st.markdown("""
