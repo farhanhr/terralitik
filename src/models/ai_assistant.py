@@ -14,12 +14,12 @@ def get_ai_recommendation(location, current_risk, avg_forecast, est_loss, api_ke
         
         Data saat ini:
         - Status Risiko Saat Ini: {current_risk}
-        - Rata-rata Skor Kekeringan 30 Hari Kedepan: {avg_forecast * 100:.1f}% (Batas krisis > 75%)
+        - Rata-rata Skor Kekeringan 14 Hari Kedepan: {avg_forecast * 100:.1f}% (Batas krisis > 75%)
         - Estimasi Kerugian Finansial: Rp {est_loss:,.0f} per Hektar
         
         Format output:
         1. [Analisis Singkat] - Jelaskan makna data di atas dengan bahasa yang mudah dipahami petani/aparat desa.
-        2. [Tindakan Mitigasi] - Berikan 3 poin tindakan (bullet points) praktis dan spesifik untuk menyelamatkan panen.
+        2. [Tindakan Mitigasi] - Berikan  poin-poin tindakan (bullet points) praktis dan spesifik untuk menyelamatkan panen.
         Gunakan bahasa Indonesia yang profesional, tegas, dan darurat jika berisiko tinggi.
         """
         
