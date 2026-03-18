@@ -18,7 +18,7 @@ def get_ai_recommendation(location, current_risk, avg_forecast, est_loss, api_ke
         
         Format output:
         1. [Analisis Singkat] - Jelaskan makna data di atas dengan bahasa yang mudah dipahami petani/aparat desa.
-        2. [Tindakan Mitigasi] - Berikan 3 poin tindakan (bullet points) praktis dan spesifik untuk menyelamatkan panen.
+        2. [Tindakan Mitigasi] - Berikan beberapa poin-poin tindakan (bullet points) praktis dan spesifik untuk menyelamatkan panen.
         Gunakan bahasa Indonesia yang profesional, tegas, dan darurat jika berisiko tinggi.
         """
         
