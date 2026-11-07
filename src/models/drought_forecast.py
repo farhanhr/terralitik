@@ -3,7 +3,8 @@ import os
 from pathlib import Path
 
 import pandas as pd
-from xgboost import XGBRegressor
+import xgboost
+from xgboost import Booster, DMatrix
 
 FEATURES = ["precipitation", "temp_avg", "rain_anomaly", "temp_anomaly"]
 
@@ -11,16 +12,34 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MODEL_PATH = PROJECT_ROOT / "artifacts" / "drought_xgb.json"
 DEFAULT_MANIFEST_PATH = PROJECT_ROOT / "artifacts" / "model_manifest.json"
 
+NUM_BOOST_ROUND = 300
+TRAINING_PARAMS = {
+    "objective": "reg:squarederror",
+    "max_depth": 6,
+    "eta": 0.05,
+    "seed": 42,
+    "tree_method": "hist",
+    "nthread": 2,
+}
 
-def build_model():
-    return XGBRegressor(
-        n_estimators=300,
-        max_depth=6,
-        learning_rate=0.05,
-        random_state=42,
-        tree_method="hist",
-        n_jobs=2,
+
+def train_booster(frame, params=None, num_boost_round=NUM_BOOST_ROUND):
+    dtrain = DMatrix(
+        frame[FEATURES],
+        label=frame["drought_score"],
+        feature_names=FEATURES,
     )
+    return xgboost.train(
+        params=dict(params or TRAINING_PARAMS),
+        dtrain=dtrain,
+        num_boost_round=num_boost_round,
+    )
+
+
+def predict_scores(model, frame):
+    if hasattr(model, "inplace_predict"):
+        return model.inplace_predict(frame[FEATURES])
+    return model.predict(frame[FEATURES])
 
 
 def validate_feature_schema(df, require_target=False, allow_nulls=False):
@@ -53,10 +72,7 @@ def train_model(df):
     if train_df.empty:
         raise ValueError("Tidak ada baris valid untuk training setelah dropna().")
 
-    model = build_model()
-    model.fit(train_df[FEATURES], train_df["drought_score"])
-
-    return model
+    return train_booster(train_df)
 
 
 def save_model(model, path=DEFAULT_MODEL_PATH):
@@ -76,16 +92,16 @@ def load_model(path=DEFAULT_MODEL_PATH):
             "Jalankan `python src/models/train_drought_model.py` untuk membuatnya."
         )
 
-    model = XGBRegressor()
+    model = Booster()
     try:
-        model.load_model(path)
+        model.load_model(str(path))
     except Exception as exc:  # corrupted or incompatible artifact
         raise RuntimeError(
             f"Gagal memuat model dari {path}: {exc}. "
             "Latih ulang model dengan `python src/models/train_drought_model.py`."
         ) from exc
 
-    feature_names = getattr(model, "feature_names_in_", None)
+    feature_names = getattr(model, "feature_names", None)
     if feature_names is not None and list(feature_names) != FEATURES:
         raise RuntimeError(
             "Urutan fitur pada artifact tidak cocok dengan FEATURES. "
@@ -136,7 +152,7 @@ def forecast_next_days(model, df, location):
 
     validate_feature_schema(future_df)
 
-    predictions = model.predict(future_df[FEATURES])
+    predictions = predict_scores(model, future_df)
 
     forecast_scores = [max(0.0, min(1.0, float(pred))) for pred in predictions]
     forecast_dates = future_df["date"].dt.strftime("%Y-%m-%d").tolist()

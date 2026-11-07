@@ -5,7 +5,7 @@ from unittest import mock
 
 import streamlit as st
 from streamlit.testing.v1 import AppTest
-from xgboost import XGBRegressor
+import xgboost
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_PATH = ROOT / "src" / "dashboard" / "app.py"
@@ -20,8 +20,8 @@ class AppStartupTest(unittest.TestCase):
 
     def test_dashboard_starts_without_training(self):
         with mock.patch.object(
-            XGBRegressor,
-            "fit",
+            xgboost,
+            "train",
             side_effect=AssertionError("dashboard tidak boleh melakukan training"),
         ):
             app = AppTest.from_file(str(APP_PATH), default_timeout=60).run()

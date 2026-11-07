@@ -103,7 +103,7 @@ python src/models/train_drought_model.py
 This script:
 
 1. Loads `data/processed/drought_risk.csv` and validates the feature schema.
-2. Trains `XGBRegressor` with `n_estimators=300`, `max_depth=6`, `learning_rate=0.05`, `random_state=42`, `tree_method="hist"`, `n_jobs=2`.
+2. Trains an XGBoost `Booster` (native API, no scikit-learn) with `num_boost_round=300`, `max_depth=6`, `eta=0.05`, `seed=42`, `tree_method="hist"`, `nthread=2`.
 3. Computes training metrics plus a time-based holdout evaluation (reporting only; the final model still trains on all rows).
 4. Writes `artifacts/drought_xgb.json` and `artifacts/model_manifest.json` atomically.
 5. Prints the model version, row count, duration, and metrics.
@@ -116,6 +116,7 @@ If the dataset is empty, missing required columns, or contains null features, tr
 
 - `model_version`, `trained_at`, `xgboost_version`
 - `features` (order matters: `precipitation`, `temp_avg`, `rain_anomaly`, `temp_anomaly`)
+- `num_boost_round` and `training_params`
 - `n_train_rows`, `n_locations`, `n_dates`
 - dataset path, SHA-256 hash, and latest date
 - model file SHA-256

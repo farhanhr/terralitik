@@ -16,10 +16,13 @@ from models.drought_forecast import (  # noqa: E402
     DEFAULT_MANIFEST_PATH,
     DEFAULT_MODEL_PATH,
     FEATURES,
+    NUM_BOOST_ROUND,
     PROJECT_ROOT,
-    build_model,
+    TRAINING_PARAMS,
+    predict_scores,
     save_manifest,
     save_model,
+    train_booster,
     validate_feature_schema,
 )
 
@@ -86,9 +89,8 @@ def evaluate_time_holdout(df):
     if train_df.empty or holdout_df.empty:
         return None
 
-    eval_model = build_model()
-    eval_model.fit(train_df[FEATURES], train_df["drought_score"])
-    predictions = eval_model.predict(holdout_df[FEATURES])
+    eval_model = train_booster(train_df)
+    predictions = predict_scores(eval_model, holdout_df)
 
     result = _metrics(holdout_df["drought_score"], predictions)
     result["cutoff_date"] = pd.Timestamp(cutoff).strftime("%Y-%m-%d")
@@ -115,12 +117,11 @@ def train_and_save(
             f"minimal {MIN_TRAIN_ROWS} baris diperlukan."
         )
 
-    model = build_model()
     train_started = time.perf_counter()
-    model.fit(train_df[FEATURES], train_df["drought_score"])
+    model = train_booster(train_df)
     train_seconds = time.perf_counter() - train_started
 
-    predictions = model.predict(train_df[FEATURES])
+    predictions = predict_scores(model, train_df)
     if pd.isna(predictions).any():
         raise ValueError("Model menghasilkan prediksi NaN; artifact tidak disimpan.")
 
@@ -137,6 +138,8 @@ def train_and_save(
         "trained_at": trained_at,
         "xgboost_version": xgboost.__version__,
         "features": FEATURES,
+        "num_boost_round": NUM_BOOST_ROUND,
+        "training_params": dict(TRAINING_PARAMS),
         "n_train_rows": int(len(train_df)),
         "n_locations": int(train_df["location"].nunique()),
         "n_dates": int(pd.to_datetime(train_df["date"]).dt.normalize().nunique()),
