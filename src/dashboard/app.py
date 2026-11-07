@@ -1,19 +1,42 @@
+import logging
 import os
 import sys
+import time
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import json
 import streamlit as st
+from streamlit.errors import StreamlitSecretNotFoundError
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import urllib.parse
-from models.drought_forecast import train_model, forecast_next_days, crop_failure_risk
+from models.drought_forecast import (
+    DEFAULT_MANIFEST_PATH,
+    DEFAULT_MODEL_PATH,
+    crop_failure_risk,
+    forecast_next_days,
+    load_manifest,
+    load_model,
+)
 
 try:
     from models.ai_assistant import get_ai_recommendation
 except ImportError:
-    pass 
+    pass
+
+_STARTUP_T0 = time.perf_counter()
+logger = logging.getLogger("terralitik")
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
+    logger.addHandler(_handler)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+
+def log_duration(label, seconds):
+    logger.info("[startup] %s: %.3fs", label, seconds)
 
 st.set_page_config(page_title="Terralitik | EWS", page_icon="🌱", layout="wide")
 
@@ -27,33 +50,49 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 GEOJSON_PATH = "data/geospatial/jawa_kabupaten.geojson"
+DATA_PATH = "data/processed/drought_risk.csv"
 
-@st.cache_data
-def load_and_prepare_data():
-    df = pd.read_csv("data/processed/drought_risk.csv")
-    df['date'] = pd.to_datetime(df['date'])
-    return df
+@st.cache_data(show_spinner=False)
+def load_and_prepare_data(path=DATA_PATH):
+    data = pd.read_csv(path)
+    data['date'] = pd.to_datetime(data['date'])
+    return data
 
+@st.cache_data(show_spinner=False)
+def load_geojson(path=GEOJSON_PATH):
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    for feature in data["features"]:
+        props = feature["properties"]
+        feature["id"] = props.get("regency_city", "")
+    return data
+
+@st.cache_resource(show_spinner="Memuat model prediksi...")
+def get_model(model_path, model_version):
+    return load_model(model_path)
+
+_started = time.perf_counter()
 df = load_and_prepare_data()
+log_duration("load_csv", time.perf_counter() - _started)
 
-with open(GEOJSON_PATH, encoding="utf-8") as f:
-    geojson = json.load(f)
+_started = time.perf_counter()
+geojson = load_geojson()
+log_duration("load_geojson", time.perf_counter() - _started)
 
-@st.cache_resource
-def get_model(data):
-    return train_model(data)
-
-model = get_model(df)
+_started = time.perf_counter()
+try:
+    manifest = load_manifest(DEFAULT_MANIFEST_PATH)
+    model = get_model(str(DEFAULT_MODEL_PATH), str(manifest.get("model_version", "")))
+except (FileNotFoundError, RuntimeError, ValueError) as exc:
+    st.error(f"Model prediksi belum siap: {exc}")
+    st.stop()
+log_duration("load_model", time.perf_counter() - _started)
 
 df_map = df.dropna(subset=['drought_score']).sort_values('date').groupby('location').last().reset_index()
 
-
-for feature in geojson["features"]:
-    props = feature["properties"]
-    feature["id"] = props.get("regency_city", "")
-
 st.markdown("### 🗺 Persebaran Risiko Kekeringan Terkini")
 
+_started = time.perf_counter()
 fig_map = px.choropleth_map(
     df_map,
     geojson=geojson,
@@ -72,6 +111,7 @@ fig_map = px.choropleth_map(
 )
 fig_map.update_layout(margin={"r":0,"t":0,"l":0,"b":0}, height=500)
 st.plotly_chart(fig_map, width='stretch')
+log_duration("build_map", time.perf_counter() - _started)
 
 st.divider()
 
@@ -82,7 +122,13 @@ selected_location = st.selectbox("Pilih Kabupaten/Kota untuk dianalisis:", locat
 loc_df = df[df["location"] == selected_location].sort_values("date")
 valid_loc_df = loc_df.dropna(subset=['drought_score', 'risk_level'])
 
-forecast_dates, forecast_scores = forecast_next_days(model, df, selected_location)
+_started = time.perf_counter()
+try:
+    forecast_dates, forecast_scores = forecast_next_days(model, df, selected_location)
+except ValueError as exc:
+    st.error(f"Validasi fitur gagal: {exc}")
+    forecast_dates, forecast_scores = [], []
+log_duration("inference", time.perf_counter() - _started)
 
 if forecast_scores:
     future_risk_score = forecast_scores[-1]
@@ -140,7 +186,10 @@ est_loss_value = BASELINE_YIELD_VALUE_PER_HA * potential_loss_percentage
 with tab2:
     st.markdown("#### 💬 Asisten Terralitik")
     st.info("Asisten akan menerjemahkan data teknis menjadi instruksi mitigasi.")
-    api_key = st.secrets.get("GEMINI_API_KEY", "")
+    try:
+        api_key = st.secrets.get("GEMINI_API_KEY", "")
+    except StreamlitSecretNotFoundError:
+        api_key = ""
     
     if st.button("Generate Rekomendasi Mitigasi dengan AI", type="primary"):
         with st.spinner("AI sedang menganalisis data satelit dan merumuskan kebijakan..."):
@@ -247,3 +296,5 @@ Skor Kekeringan: {avg_forecast_score:.2f} (Batas Kritis > 0.75)
         st.link_button("Bagikan Peringatan via WhatsApp", whatsapp_url, type="primary")
     else:
         st.success("Kondisi iklim saat ini terpantau aman. Tidak ada tindakan darurat yang diperlukan.")
+
+log_duration("total_startup", time.perf_counter() - _STARTUP_T0)

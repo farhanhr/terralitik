@@ -3,10 +3,14 @@ name: Daily Climate Data Update
 on:
   schedule:
     - cron: '0 17 * * *'
-  workflow_dispatch: 
+  workflow_dispatch:
 
 permissions:
-  contents: write 
+  contents: write
+
+concurrency:
+  group: daily-climate-update
+  cancel-in-progress: false
 
 jobs:
   update-data:
@@ -14,33 +18,36 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install pipeline dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-pipeline.txt
 
-      - name: Run Data Pipeline
+      - name: Run data pipeline
         run: |
           python src/data_pipeline/fetch_weather.py
           python src/analysis/feature_engineering.py
           python src/analysis/drought_index.py
 
-      - name: Commit and Push Updated CSV
+      - name: Train and validate drought model
+        run: python src/models/train_drought_model.py
+
+      - name: Commit and push updated data and model
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "Terralitik Auto-Bot"
-          git add data/raw/ data/processed/
-          
+          git add data/raw/ data/processed/ artifacts/
+
           if git diff --staged --quiet; then
             echo "Tidak ada data baru untuk di-commit."
           else
-            git commit -m "Auto-update: daily climate data"
+            git commit -m "Auto-update: daily climate data and model"
             git push
           fi
