@@ -1,8 +1,8 @@
 {
   "dataset": {
-    "max_date": "2026-11-21",
+    "max_date": "2026-11-22",
     "path": "data/processed/drought_risk.csv",
-    "sha256": "d289018f82b5eec6fe9bc26b8a6a866f7eb0e555af336cd9705cc11f29b4dd5b"
+    "sha256": "c01b9b966f4880c0c8a8684b15850411c3f894bd2f80ab10a0f4ef80fde98b10"
   },
   "features": [
     "precipitation",
@@ -10,30 +10,30 @@
     "rain_anomaly",
     "temp_anomaly"
   ],
-  "fit_seconds": 0.325,
+  "fit_seconds": 0.198,
   "metrics": {
     "time_holdout": {
-      "cutoff_date": "2026-09-21",
-      "mae": 0.019428,
+      "cutoff_date": "2026-09-22",
+      "mae": 0.01871,
       "n_rows": 6758,
-      "r2": 0.982733,
-      "rmse": 0.024946
+      "r2": 0.984352,
+      "rmse": 0.024067
     },
     "train": {
-      "mae": 0.016724,
-      "r2": 0.990284,
-      "rmse": 0.022228
+      "mae": 0.016513,
+      "r2": 0.990549,
+      "rmse": 0.021932
     }
   },
   "model_file": "artifacts/drought_xgb.json",
-  "model_sha256": "566a814f7856855ea8097a59a9107b9488d4215b3fd74a828912668ec42ba808",
-  "model_version": "2026-11-07T20:35:21+00:00-d289018f82b5",
-  "n_dates": 309,
+  "model_sha256": "e287bd9ffd37a6d24c5c9e2cedc2638151051b04e6bd8bc274714f92098bd960",
+  "model_version": "2026-11-08T20:50:41+00:00-c01b9b966f48",
+  "n_dates": 310,
   "n_locations": 109,
-  "n_train_rows": 33681,
+  "n_train_rows": 33790,
   "num_boost_round": 300,
   "schema_version": 1,
-  "trained_at": "2026-11-07T20:35:21+00:00",
+  "trained_at": "2026-11-08T20:50:41+00:00",
   "training_params": {
     "eta": 0.05,
     "max_depth": 6,
@@ -42,6 +42,6 @@
     "seed": 42,
     "tree_method": "hist"
   },
-  "training_seconds": 0.771,
+  "training_seconds": 0.504,
   "xgboost_version": "3.2.0"
 }
