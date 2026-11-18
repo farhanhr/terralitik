@@ -10,7 +10,7 @@
     "rain_anomaly",
     "temp_anomaly"
   ],
-  "fit_seconds": 0.273,
+  "fit_seconds": 0.23,
   "metrics": {
     "time_holdout": {
       "cutoff_date": "2026-09-29",
@@ -27,13 +27,13 @@
   },
   "model_file": "artifacts/drought_xgb.json",
   "model_sha256": "4e32cb43bd1cd3d981bd9fc7addd32e24b26220ab358daeb123a570167d3cfe1",
-  "model_version": "2026-11-17T23:41:29+00:00-43d8950b6dbf",
+  "model_version": "2026-11-18T23:12:17+00:00-43d8950b6dbf",
   "n_dates": 319,
   "n_locations": 109,
   "n_train_rows": 34771,
   "num_boost_round": 300,
   "schema_version": 1,
-  "trained_at": "2026-11-17T23:41:29+00:00",
+  "trained_at": "2026-11-18T23:12:17+00:00",
   "training_params": {
     "eta": 0.05,
     "max_depth": 6,
@@ -42,6 +42,6 @@
     "seed": 42,
     "tree_method": "hist"
   },
-  "training_seconds": 0.636,
+  "training_seconds": 0.524,
   "xgboost_version": "3.2.0"
 }
